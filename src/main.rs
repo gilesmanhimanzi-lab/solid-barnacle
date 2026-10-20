@@ -1,12 +1,10 @@
 use axum:: {
-    body:: {to_bytes, Body},
-    extract::ws:: {WebSocketUpgrade, WebSocket },
+    extract::ws:: {WebSocketUpgrade, WebSocket, Message },
     routing::any,
     response:: { IntoResponse},
     Router,
 };
 use axum_extra::TypedHeader;
-
 //use std::ops::ControlFlow;
 use std::{net::SocketAddr};
 
@@ -15,7 +13,7 @@ use std::{net::SocketAddr};
 use axum::extract::connect_info::ConnectInfo;
 //use axum::extract::ws::CloseFrame;
 
-//use futures_util::{sink::SinkExt, stream::StreamExt};
+use futures_util::{StreamExt};
 
 #[warn(unused_imports)]
 
@@ -24,11 +22,17 @@ async fn main() {
 
     let app = Router::new().route("/ws", any(handler));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
-        .await
-        .unwrap();
-    axum::serve(listener, app)
-        .await;
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+
+    axum::serve(
+        listener, 
+        app.into_make_service_with_connect_info::<SocketAddr>()
+    )
+    .await
+    .expect("Server could not be started");
+
+    println!("Server is listening....");
+
 }
 
 async fn handler(
@@ -36,16 +40,54 @@ async fn handler(
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
-    let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
-        user_agent.to_string()
-    } else {
-        String::from("unknown Browser")
-    };
-    println!("`{user_agent}` at {addr} connected.");
+    let user_agent = user_agent
+    .map(|TypedHeader(agent)| agent.to_string())
+    .unwrap_or_else(||"unknown client".to_string());
+    
+    println!("Client Connected: {user_agent} at {addr}.");
+
+    ws.on_upgrade(move |socket: WebSocket| handle_socket(socket, addr))
+    
 
 }
 
-async fn handle_socket(who: SocketAddr) {
-    println!("Handling socket for {who}");
+async fn handle_socket(mut socket: WebSocket, addr: SocketAddr) {
+    println!("Handling socket for {addr}");
+
+    while let Some(result) = socket.next().await {
+        match result {
+            Ok(Message::Text(text)) => {
+                println!("Message from {addr}: {text}");
+
+                let response = format!("Server got: {text}");
+
+                if socket
+                    .send(Message::Text(response.into()))
+                    .await
+                    .is_err()
+
+                {
+                    println!("Failed to  send message to {addr}");
+                    break;
+                }
+            }
+
+            Ok(Message::Close(_)) => {
+                println!("{addr} disconnected");
+                break;
+            }
+
+            Ok(_) => {
+
+            }
+
+            Err(error) => {
+                println!("Error from {addr}: {error}");
+                break;
+            }
+        }
+    }
+
+    println!("COnnection closed for {addr}");
 }
 
