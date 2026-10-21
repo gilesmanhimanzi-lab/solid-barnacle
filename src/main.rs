@@ -15,14 +15,25 @@ use axum::extract::connect_info::ConnectInfo;
 
 use futures_util::{StreamExt};
 
+struct Procurement {
+    id: u32,
+    name: String,
+    quantity: u32,
+    price: f64,
+}
+
 #[warn(unused_imports)]
 
 #[tokio::main]
 async fn main() {
 
-    let app = Router::new().route("/ws", any(handler));
+    let app = Router::new()
+        .route("/ws", any(handler))
+        .route("/", any(front));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+
+    println!("Server is listening....");
 
     axum::serve(
         listener, 
@@ -30,9 +41,6 @@ async fn main() {
     )
     .await
     .expect("Server could not be started");
-
-    println!("Server is listening....");
-
 }
 
 async fn handler(
@@ -49,6 +57,10 @@ async fn handler(
     ws.on_upgrade(move |socket: WebSocket| handle_socket(socket, addr))
     
 
+}
+
+async fn front() -> impl IntoResponse {
+    "Hello, Welcome to the front"
 }
 
 async fn handle_socket(mut socket: WebSocket, addr: SocketAddr) {
