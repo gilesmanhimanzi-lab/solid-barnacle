@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Server endpoint</title>
+
+    <style></style>
+</head>
+
+
+
+<body>
+    <h1>Zaza</h1>
+
+    <p>It costs to be alive</p>
+
+    <input
+        type="password"
+        id="accessCode"
+        placeholder="Enter your code"
+        autocomplete="false"
+    >
+
+    <button id="connectButton">Connect</button>
+
+    <script>
+        let socket = null;
+
+        const accessCode = document.getElementById("accessCode");
+        const connectButton = document.getElementById("connectButton");
+
+        connectButton.addEventListener("click", async() => {
+            if (socket && socket.readyState === Websocket.OPEN) {
+                return;
+            }
+        })
+    </script>
+    
+</body>

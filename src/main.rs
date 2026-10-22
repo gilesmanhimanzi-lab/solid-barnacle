@@ -1,15 +1,12 @@
-use axum:: {
-    extract::ws:: {WebSocketUpgrade, WebSocket, Message },
-    routing::any,
-    response:: { IntoResponse},
-    Router,
+use axum::{
+    Router, extract::ws::{Message, WebSocket, WebSocketUpgrade }, response::IntoResponse, routing::{any, get_service},
 };
 use axum_extra::TypedHeader;
 //use std::ops::ControlFlow;
 use std::{net::SocketAddr};
+use tower_http::services::ServeFile;
 
 //use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
 use axum::extract::connect_info::ConnectInfo;
 //use axum::extract::ws::CloseFrame;
 
@@ -29,7 +26,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/ws", any(handler))
-        .route("/", any(front));
+        .route("/", get_service(ServeFile::new("assets/index.html")));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
@@ -60,7 +57,40 @@ async fn handler(
 }
 
 async fn front() -> impl IntoResponse {
-    "Hello, Welcome to the front"
+    "Zaza";
+    let list = vec![
+        Procurement {
+            id: 1,
+            name: "Brownie".to_string(),
+            quantity: 3,
+            price: 3.0,
+        },
+        Procurement {
+            id: 2,
+            name: "Rods".to_string(),
+            quantity: 2,
+            price: 1.0,
+        },
+        Procurement {
+            id: 3,
+            name: "Candy".to_string(),
+            quantity: 4,
+            price: 1.0,
+        },
+    ];
+    format!(
+        "
+            <html>
+                <head>
+                    <title>Procurement List</title>
+                </head>
+                <body>
+                    <h1>Procurement List</h1>
+                    
+                </body>
+            </html>
+        "
+    )
 }
 
 async fn handle_socket(mut socket: WebSocket, addr: SocketAddr) {
